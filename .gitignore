@@ -12,3 +12,7 @@ docs/
 
 # Dotenv file
 .env
+
+!/out/Core.sol/
+!/out/Factory.sol/
+
