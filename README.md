@@ -125,6 +125,9 @@ src/
   mocks/
     Token.sol       # Mock USDC (6 decimals) for local use
 
+script/
+  Deploy.s.sol      # Foundry deployment script for PredictionMarketFactory
+
 test/
   Core.t.sol        # Full test suite (unit, integration, fuzz)
 
@@ -133,6 +136,7 @@ lib/
   openzeppelin-contracts/ # OZ v5 (ERC20, SafeERC20, ReentrancyGuard)
 
 foundry.toml        # Foundry project config
+.env.example        # Required environment variables (copy to .env)
 .github/workflows/
   test.yml          # CI: fmt check, build, test
 ```
@@ -233,21 +237,78 @@ forge test --fuzz-runs 10000 -vvv
 
 ---
 
-## Local Node (Anvil)
+## Deployment
 
-Start a local node:
+### 1. Set up environment variables
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and set:
+
+| Variable | Description |
+|---|---|
+| `PRIVATE_KEY` | Private key of the deployer wallet (with `0x` prefix) |
+| `RPC_URL` | RPC endpoint for the target network |
+| `TREASURY_ADDRESS` | Address that receives the protocol's share of fees |
+| `PROTOCOL_FEE_BPS` | Protocol fee in basis points — max `3000` (= 30 % of the market fee). E.g. `1000` = 10 % |
+| `ETHERSCAN_API_KEY` | *(optional)* Required only if you add `--verify` |
+
+> **Never commit `.env`** — it contains your private key. `.env` is already in `.gitignore`.
+
+### 2. Deploy to a local node (Anvil)
+
+Start a local node in one terminal:
 
 ```bash
 anvil
 ```
 
-Deploy the factory to the local node:
+The first Anvil account's private key is always:
 
-```bash
-forge script script/Counter.s.sol --rpc-url http://localhost:8545 --broadcast
+```
+0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 ```
 
-> The included script is the default Foundry placeholder. Replace it with a deployment script for `PredictionMarketFactory` before using this step.
+Set your `.env` to use that key and `RPC_URL=http://localhost:8545`, then run:
+
+```bash
+source .env
+forge script script/Deploy.s.sol \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY" \
+  --broadcast \
+  -vvv
+```
+
+### 3. Deploy to a live network
+
+```bash
+source .env
+forge script script/Deploy.s.sol \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY" \
+  --broadcast \
+  -vvv
+```
+
+Add `--verify --etherscan-api-key "$ETHERSCAN_API_KEY"` to verify the contract on Etherscan in the same step:
+
+```bash
+source .env
+forge script script/Deploy.s.sol \
+  --rpc-url "$RPC_URL" \
+  --private-key "$PRIVATE_KEY" \
+  --broadcast \
+  --verify \
+  --etherscan-api-key "$ETHERSCAN_API_KEY" \
+  -vvv
+```
+
+The script prints the deployed factory address, `protocolAdmin`, `protocolTreasury`, and `protocolFeeBps` to stdout. The broadcast transaction is also saved under `broadcast/Deploy.s.sol/<chainId>/run-latest.json` for reference.
 
 ---
 
